@@ -1,46 +1,83 @@
-from app.extensions import db
-from datetime import datetime
-class Category(db.Model):
-    __tablename__= "categories"
-    id = db.column(db.integer,primary_key=True)
-    name=db.column(db.string(30),nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.now())  
-    updated_at = db.Column(db.DateTime, onupdate=datetime.now() )  
-    
-    def __init__(self, name, description):
-        self.name = name  
-        self.description = description  
+from flask import   request, jsonify, Blueprint
+from app.models import Category, Product, Customer
 
-class Product(db.Model):
-    __tablename__= "products"
-    id = db.column(db.integer,primary_key=True)
-    name=db.column(db.string(30),nullable=False)
-    price= db.column(db.integer,nullable= False)
-    stock=db.column(db.integer,nullable=False)
-    color=db.column(db.string(30),nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.now())  
-    updated_at = db.Column(db.DateTime, onupdate=datetime.now() )  
-    
-    def __init__(self, name, price,stock,color):
-        self.name = name  
-        self.price=price
-        self.stock=stock
-        self.color=color
 
-class Customer(db.Model):
-    __tablename="customers"
-    id = db.Column(db.Integer, primary_key=True)  
-    first_name = db.Column(db.String(30), nullable=False)  
-    last_name = db.Column(db.String(30), nullable=False)  
-    contact = db.Column(db.String(15), unique=True, nullable=False)  
-    email = db.Column(db.String(100), unique=True, nullable=False)    
-    address = db.Column(db.String(255), nullable=True)   
-    created_at = db.Column(db.DateTime, default=datetime.now())  
-    updated_at = db.Column(db.DateTime, onupdate=datetime.now() )  
+category_bp=Blueprint('category',__name__)
+# Create a category
+@category_bp.route('/categories', methods=['POST'])
+def create_category():
+    data = request.json() # Get json data from request
+    name= data.get("name")
+
+    if not name:
+        return jsonify({"error":"category not created"})
+# stores products in memory
+products = []
+product_bp=Blueprint("product",__name__)
+#  POST Creates a product
+@product_bp.route("/products", methods=['POST'])
+def create_products():
+    """Create a new product"""
+    data = request.get_json()#get Json data from request
+    name=data.get('name')
+    price=data.get('price')
+    stock=data.get('stock')
+    color=data.get('color')
+
+    if not name or not price or not stock or not color:
+        return jsonify({"error":"missing required field"}), 400
+    product={
+        "id":len(products) + 1,
+        "name":name,
+        "price": price,
+        "stock": stock,
+        "color": color
+    }
+    products.append(product)
+    return jsonify(product), 201
+customer_bp=Blueprint("customer",__name__)
+#Create a customer
+@customer_bp.route("/customers", methods=["POST"])
+def create_customer():
+    data=request.json()
+    first_name=data.get("name")
+    last_name=data.get("last_name")
+    address=data.get("address")
+    contact = data.get("contact")
+    email=data.get("email")
+
+    if not first_name or not last_name or not address or not contact or not email:
+        return jsonify({"error":"Customer not created"})
+
+# PUT Update a product by ID
+@product_bp.route("/products/<int:id>",methods=['PUT'])
+def update_product(id):
+    data=request.get_json()
+    for product in products:
+        if product["id"]==id:
+            product.update(data)
+            return jsonify(product)
+    return jsonify({"error":"product not found"}), 404
+
+# Get retrieves all products
+@product_bp.route("/products", methods=["GET"])
+def get_products():
+    return jsonify(products)
+
+#Delete removes a program  from the list
+@ product_bp.route('/delete/<int:author_id>', methods=['DELETE'])
+def delete_product():
+    product=id
+
+    if not product:
+        return jsonify({"error": "product not found"}), 404
+
+    products.session.delete(product)
+    products.session.commit()
+
+    return jsonify({"message": "Product deleted successfully"}), 200
+
     
-    def __init__(self, first_name, last_name, contact, email, address):
-        self.first_name = first_name  
-        self.last_name = last_name  
-        self.contact = contact  
-        self.email = email  
-        self.address=address
+
+    
+
